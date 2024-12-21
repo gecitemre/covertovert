@@ -76,7 +76,7 @@ class MyCovertChannel(CovertChannelBase):
         """
         self.received_message = ""
 
-        sniff(filter="ether", prn=self.process_packet)
+        sniff(filter="ip", prn=self.process_packet)
 
         # Convert the received binary message to a string
         received_message = "".join(
