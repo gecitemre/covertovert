@@ -1,8 +1,9 @@
 import socket
 import struct
+import time
 
 from CovertChannelBase import CovertChannelBase
-from scapy.all import IP, Ether, send, sniff
+from scapy.all import IP, send, sniff
 
 """Covert Storage Channel that exploits Protocol Field Manipulation using Reserved Flag field in IP [Code: CSC-PSV-IP-RF]"""
 
@@ -21,67 +22,79 @@ class MyCovertChannel(CovertChannelBase):
         """
         super().__init__()
 
-    def send(self, log_file_name, source, destination):
+    def send(self, source, destination, log_file_name):
         """
         This function generates a random binary message, embeds it into the reserved flag field of the IP header, and sends it.
         source: Source IP address
         destination: Destination IP address
         """
-        # Generate a random binary message
-        message = self.generate_random_binary_message()
+        message = self.generate_random_binary_message(max_length=10)
+        with open(log_file_name, "w") as my_file:
+            my_file.write(message)
 
-        # Convert the message to binary format
-        binary_message = "".join(format(ord(char), "08b") for char in message)
+        # Send the length of the message using 10 bits
+        length = len(message)
+        length_bits = format(length, "010b")
+        self.send_message(length_bits, source, destination)
 
-        # Split the binary message into 3-bit chunks
-        for i in range(0, len(binary_message), 3):
-            fragment = binary_message[i : i + 3]
-            reserved_flag = int(fragment, 2) << 13
+        time.sleep(1)
+        self.send_message(message, source, destination)
 
-            # Create the IP header with the reserved flag
-            ip_header = struct.pack(
-                "!BBHHHBBH4s4s",
-                69,  # Version and IHL
-                0,  # Type of Service
-                20,  # Total Length
-                54321,  # Identification
-                reserved_flag,  # Flags and Fragment Offset
-                255,  # TTL
-                socket.IPPROTO_TCP,  # Protocol
-                0,  # Header Checksum
-                socket.inet_aton(source),  # Source Address
-                socket.inet_aton(destination),  # Destination Address
+    def send_message(self, message, source, destination):
+        """
+        This function embeds the given message into the reserved flag field of the IP header and sends it.
+        source: Source IP address
+        destination: Destination IP address
+        message: Message to be sent
+        """
+        for i, bit in enumerate(message):
+            ip_packet = IP(
+                src=source,
+                dst=destination,
+                id=i,
+                flags=0b100 if bit == "1" else 0b000,
             )
 
-            # Send the packet
-            send(IP(ip_header))
+            send(ip_packet, verbose=False)
 
     def process_packet(self, packet):
         """
         This function processes the received packet and extracts the message embedded in the reserved flag field of the IP header.
         """
+        if packet.id >= len(self.received_message):
+            return
         # Extract the reserved flag field
-        flags_and_fragment_offset = packet[IP].flags
-        reserved_flag = flags_and_fragment_offset >> 13
+        flags = packet[IP].flags
 
-        # Extract the message
-        self.received_message += format(reserved_flag, "03b")
+        # Extract the 3rd bit of the reserved flag field
+        reserved_flag = flags & 0b100
 
-    def receive(self, log_file_name, source, destination, expected_message_length=10):
+        self.received_message[packet.id] = "1" if reserved_flag else "0"
+
+    def receive(self, log_file_name, source, destination):
         """
         This function listens for incoming packets, extracts messages embedded in the reserved flag field of the IP header, and logs the received binary message.
         source: Source IP address
         destination: Destination IP address
-        expected_message_length: Length of the expected binary message
         """
-        self.received_message = ""
+        self.received_message = [-1] * 10
 
-        sniff(filter="ip", prn=self.process_packet)
+        sniff(
+            filter="ip and src {} and dst {}".format(source, destination),
+            prn=self.process_packet,
+            stop_filter=lambda _: all(bit != -1 for bit in self.received_message),
+        )
+        expected_message_length = 0
+        for bit in self.received_message:
+            expected_message_length = (expected_message_length << 1) | int(bit)
+        self.received_message = [-1] * expected_message_length
 
-        # Convert the received binary message to a string
-        received_message = "".join(
-            chr(int(self.received_message[i : i + 8], 2))
-            for i in range(0, len(self.received_message), 8)
+        sniff(
+            filter="ip and src {} and dst {}".format(source, destination),
+            prn=self.process_packet,
+            stop_filter=lambda _: all(bit != -1 for bit in self.received_message),
         )
 
-        return received_message
+        with open(log_file_name, "w") as my_file:
+            my_file.write("".join(self.received_message))
+        return self.received_message
