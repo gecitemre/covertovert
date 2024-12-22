@@ -28,7 +28,7 @@ class MyCovertChannel(CovertChannelBase):
         source: Source IP address
         destination: Destination IP address
         """
-        message = self.generate_random_binary_message(max_length=10)
+        message = self.generate_random_binary_message()
         with open(log_file_name, "w") as my_file:
             my_file.write(message)
 
@@ -80,7 +80,7 @@ class MyCovertChannel(CovertChannelBase):
         self.received_message = [-1] * 10
 
         sniff(
-            filter="ip and src {} and dst {}".format(source, destination),
+            filter=f"ip and src {source} and dst {destination}",
             prn=self.process_packet,
             stop_filter=lambda _: all(bit != -1 for bit in self.received_message),
         )
@@ -90,7 +90,7 @@ class MyCovertChannel(CovertChannelBase):
         self.received_message = [-1] * expected_message_length
 
         sniff(
-            filter="ip and src {} and dst {}".format(source, destination),
+            filter=f"ip and src {source} and dst {destination}",
             prn=self.process_packet,
             stop_filter=lambda _: all(bit != -1 for bit in self.received_message),
         )
