@@ -9,6 +9,7 @@ BIT_NOT_RECEIVED = "2"
 
 
 class MyCovertChannel(CovertChannelBase):
+    # Covert Storage Channel that exploits Protocol Field Manipulation using Reserved Flag field in IP [Code: CSC-PSV-IP-RF]
     received_message = ""
 
     def __init__(self):
