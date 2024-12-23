@@ -24,3 +24,6 @@ go.work.sum
 .DS_Store
 .*
 _*
+
+code/Example_UDPTimingInterarrivalChannelReceiver.log
+code/Example_UDPTimingInterarrivalChannelSender.log
