@@ -21,9 +21,7 @@ class MyCovertChannel(CovertChannelBase):
         self.source = source
         self.destination = destination
 
-        message = self.generate_random_binary_message()
-        with open(log_file_name, "w") as my_file:
-            my_file.write(message)
+        message = self.generate_random_binary_message_with_logging(log_file_name)
 
         length = len(message)
         length_bits = format(length, "010b")
@@ -61,13 +59,17 @@ class MyCovertChannel(CovertChannelBase):
         )
         return "".join(self.received_message)
 
+    def convert_binary_message_to_string(self, message):
+        return "".join(
+            self.convert_eight_bits_to_character(message[i : i + 8])
+            for i in range(0, len(message), 8)
+        )
+
     def receive(self, log_file_name, source, destination):
         self.source = source
         self.destination = destination
 
         expected_message_length = int(self.sniff_packets(10), 2)
         message = self.sniff_packets(expected_message_length)
-
-        with open(log_file_name, "w") as my_file:
-            my_file.write(message)
-        return message
+        decoded = self.convert_binary_message_to_string(message)
+        self.log_message(decoded, log_file_name)
