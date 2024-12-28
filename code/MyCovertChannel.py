@@ -17,6 +17,8 @@ class MyCovertChannel(CovertChannelBase):
         self.source = None
         self.destination = None
 
+    #Send creates a message and stores it in out logfile. We also calculate the time to send one packet and the message is sent. The send_message
+    #function calls the function send. Send_message actually encrypts teh message and creates a packet and uses the send function to send that packet.
     def send(self, source, destination, log_file_name, min_length=50, max_length=100):
         self.source = source
         self.destination = destination
@@ -84,8 +86,9 @@ class MyCovertChannel(CovertChannelBase):
             self.convert_eight_bits_to_character(message[i : i + 8])
             for i in range(0, len(message), 8)
         )
-
-    def receive(self, log_file_name, source, destination):
+    #Receive function receives a packet uses sniff_packets, Sniff_packet and Process_packet are used to receive and decrypt the packets
+    #The binary message is then decoded to the actual string message
+    def receive(self, log_file_name, source, destination): 
         self.source = source
         self.destination = destination
         self.received_message = [BIT_NOT_RECEIVED] * 8
