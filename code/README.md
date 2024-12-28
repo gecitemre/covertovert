@@ -2,3 +2,6 @@
 
 ## Description
 This project implements a covert storage channel that exploits protocol field manipulation using the reserved flag field in the IP header. The channel allows for the transmission of binary messages by embedding bits into the reserved flag field of IP packets.
+
+## Capacity
+This channel has a channel capacity of 3200 bits per second.

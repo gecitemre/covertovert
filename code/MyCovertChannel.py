@@ -3,7 +3,7 @@ import struct
 import time
 
 from CovertChannelBase import CovertChannelBase
-from scapy.all import IP, send, sniff
+from scapy.all import IP, sniff
 
 BIT_NOT_RECEIVED = "2"
 
@@ -21,16 +21,14 @@ class MyCovertChannel(CovertChannelBase):
         self.source = source
         self.destination = destination
 
-        message = self.generate_random_binary_message()
-        with open(log_file_name, "w") as my_file:
-            my_file.write(message)
+        message = self.generate_random_binary_message_with_logging(
+            log_file_name, 16, 16
+        )
 
-        length = len(message)
-        length_bits = format(length, "010b")
-        self.send_message(length_bits)
-
-        time.sleep(1)
+        start_time = time.time()
         self.send_message(message)
+        end_time = time.time()
+        print(f"Time elapsed: {end_time - start_time}")
 
     def send_message(self, message):
         for i, bit in enumerate(message):
@@ -41,33 +39,47 @@ class MyCovertChannel(CovertChannelBase):
                 flags=0b100 if bit == "1" else 0b000,
             )
 
-            send(ip_packet, verbose=False)
+            super().send(ip_packet)
 
     def process_packet(self, packet):
-        if packet.id >= len(self.received_message):
+        if packet.id >= 800:
             return
 
         flags = packet[IP].flags
         reserved_flag = flags & 0b100
 
+        if len(self.received_message) <= packet.id:
+            current_bytes = len(self.received_message) // 8
+            target_bytes = packet.id // 8
+            self.received_message += [
+                BIT_NOT_RECEIVED * (target_bytes - current_bytes + 1)
+            ] * 8
+
         self.received_message[packet.id] = "1" if reserved_flag else "0"
 
-    def sniff_packets(self, expected_length):
-        self.received_message = [BIT_NOT_RECEIVED] * expected_length
+    def sniff_packets(self):
+        def stop_filter(packet):
+            return "".join(
+                self.received_message[len(self.received_message) - 8 :]
+            ) == format(ord("."), "08b")
+
         sniff(
             filter=f"ip and src {self.source} and dst {self.destination}",
             prn=self.process_packet,
-            stop_filter=lambda _: BIT_NOT_RECEIVED not in self.received_message,
+            stop_filter=stop_filter,
         )
         return "".join(self.received_message)
+
+    def convert_binary_message_to_string(self, message):
+        return "".join(
+            self.convert_eight_bits_to_character(message[i : i + 8])
+            for i in range(0, len(message), 8)
+        )
 
     def receive(self, log_file_name, source, destination):
         self.source = source
         self.destination = destination
-
-        expected_message_length = int(self.sniff_packets(10), 2)
-        message = self.sniff_packets(expected_message_length)
-
-        with open(log_file_name, "w") as my_file:
-            my_file.write(message)
-        return message
+        self.received_message = [BIT_NOT_RECEIVED] * 8
+        message = self.sniff_packets()
+        decoded = self.convert_binary_message_to_string(message)
+        self.log_message(decoded, log_file_name)
