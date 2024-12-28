@@ -34,7 +34,9 @@ class MyCovertChannel(CovertChannelBase):
         for i, bit in enumerate(message):
             reserved_flag = bit == "1"
             if i % 2 == 0:
-                reserved_flag = not reserved_flag
+                reserved_flag = (
+                    not reserved_flag
+                )  # For encryption, if i is even, reverse the reserved flag
             ip_packet = IP(
                 src=self.source,
                 dst=self.destination,
@@ -51,7 +53,9 @@ class MyCovertChannel(CovertChannelBase):
         flags = packet[IP].flags
         reserved_flag = flags & 0b100
         if packet.id % 2 == 0:
-            reserved_flag = not reserved_flag
+            reserved_flag = (
+                not reserved_flag
+            )  # For decryption, if i is even, reverse the reserved flag
 
         if len(self.received_message) <= packet.id:
             current_bytes = len(self.received_message) // 8
