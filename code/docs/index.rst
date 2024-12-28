@@ -5,9 +5,9 @@
 
 Covert Channel documentation
 ============================
-
-Please add your names, group ID, and your link to the forked public repository here by editing `index.rst` in the docs folder.
-
+Group 20
+Group Members: Ariba Kamran (2491744) and Emre Gecit 2521581
+Link to Repo: https://github.com/gecitemre/covertovert.git
 
 .. toctree::
    :maxdepth: 2
