@@ -1,5 +1,5 @@
 {
-  "covert_channel_code": "Replace it with the [Code] of chosen covert channel type seen in ODTUClass.",
+  "covert_channel_code": "CSC-PSV-IP-RF",
   "send": {
     "parameters": {
       "source": "172.18.0.2",
