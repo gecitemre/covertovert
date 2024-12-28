@@ -17,12 +17,12 @@ class MyCovertChannel(CovertChannelBase):
         self.source = None
         self.destination = None
 
-    def send(self, source, destination, log_file_name):
+    def send(self, source, destination, log_file_name, min_length=50, max_length=100):
         self.source = source
         self.destination = destination
 
         message = self.generate_random_binary_message_with_logging(
-            log_file_name, 16, 16
+            log_file_name, min_length, max_length
         )
 
         start_time = time.time()
@@ -32,11 +32,14 @@ class MyCovertChannel(CovertChannelBase):
 
     def send_message(self, message):
         for i, bit in enumerate(message):
+            reserved_flag = bit == "1"
+            if i % 2 == 0:
+                reserved_flag = not reserved_flag
             ip_packet = IP(
                 src=self.source,
                 dst=self.destination,
                 id=i,
-                flags=0b100 if bit == "1" else 0b000,
+                flags=0b100 if reserved_flag else 0b000,
             )
 
             super().send(ip_packet)
@@ -47,6 +50,8 @@ class MyCovertChannel(CovertChannelBase):
 
         flags = packet[IP].flags
         reserved_flag = flags & 0b100
+        if packet.id % 2 == 0:
+            reserved_flag = not reserved_flag
 
         if len(self.received_message) <= packet.id:
             current_bytes = len(self.received_message) // 8
